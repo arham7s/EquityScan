@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EquityScan Pro — PE Deal Screening</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F0F2F5;--surface:#fff;--border:#E4E8ED;--text:#0F172A;--muted:#64748B;
+  --accent:#059669;--accent-l:#D1FAE5;--accent-d:#065F46;
+  --danger:#EF4444;--warn:#F59E0B;--blue:#3B82F6;--purple:#8B5CF6;--navy:#0F172A;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+
+/* LAYOUT */
+header{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.header-inner{max-width:1600px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo-icon{width:32px;height:32px;background:var(--navy);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--accent)}
+.logo-text{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--navy)}
+.logo-text span{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+#search-input{padding:7px 14px 7px 32px;background:#F1F5F9;border:none;border-radius:8px;font-size:13px;width:240px;outline:none;color:var(--text)}
+.badge-live{display:flex;align-items:center;gap:5px;font-size:9px;font-weight:800;color:var(--accent);background:#ECFDF5;padding:5px 11px;border-radius:100px;border:1px solid #A7F3D0;letter-spacing:.08em;text-transform:uppercase}
+.dot-pulse{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 2s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.btn-api{padding:5px 10px;border-radius:8px;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:5px;transition:all .15s}
+.btn-api.active{background:#D1FAE5;color:var(--accent-d);border:1px solid #A7F3D0}
+.btn-api.inactive{background:#FEF9C3;color:#92400E;border:1px solid #FDE68A}
+
+main{max-width:1600px;margin:0 auto;padding:24px;width:100%}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+@media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:18px 20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-top{display:flex;justify-content:space-between;align-items:flex-start}
+.stat-icon{background:#F8FAFC;border-radius:8px;padding:8px;display:flex;align-items:center;justify-content:center}
+.trend-up{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:100px;display:flex;align-items:center;gap:3px;background:var(--accent-l);color:var(--accent-d)}
+.trend-dn{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:3px 7px;border-radius:100px;display:flex;align-items:center;gap:3px;background:#FEE2E2;color:#DC2626}
+.stat-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.stat-value{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;line-height:1.1;margin-bottom:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.stat-sub{font-size:10px;font-weight:600;color:var(--muted)}
+
+/* PORTFOLIO */
+#portfolio-strip{background:var(--navy);border-radius:14px;padding:16px 22px;margin-bottom:22px;border:1px solid rgba(5,150,105,.2);display:none;animation:fadeUp .3s ease}
+.port-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+.port-meta{display:flex;align-items:center;gap:10px}
+.port-meta-icon{background:rgba(5,150,105,.2);border-radius:8px;padding:7px;color:var(--accent);display:flex}
+.port-title{font-family:'Syne',sans-serif;font-weight:800;color:white;font-size:15px}
+.port-sub{font-size:9px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.1em}
+.port-stats{display:flex;gap:20px}
+.port-stat{text-align:right}
+.port-stat-lbl{font-size:9px;font-weight:700;color:#94A3B8;text-transform:uppercase;letter-spacing:.07em}
+.port-stat-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800}
+.port-items{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.port-item{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;flex-shrink:0}
+.port-item-name{font-size:11px;font-weight:700;color:white}
+.port-item-score{font-size:10px;font-family:'DM Mono',monospace;color:var(--accent)}
+.port-rm{background:none;border:none;color:#64748B;display:flex;padding:2px;border-radius:4px}
+.port-rm:hover{background:rgba(255,255,255,.1);color:white}
+
+/* MAIN GRID */
+.main-grid{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start}
+@media(max-width:1100px){.main-grid{grid-template-columns:1fr}}
+.left-col{display:flex;flex-direction:column;gap:20px}
+
+/* PANEL */
+.panel{background:var(--surface);border-radius:14px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.04);overflow:hidden}
+.panel-head{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.panel-title{font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px}
+.filter-pills{display:flex;gap:5px;flex-wrap:wrap}
+.fpill{padding:3px 9px;border-radius:6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .15s}
+.fpill.active{background:var(--navy);color:white;border-color:var(--navy)}
+.asset-count{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead tr{background:#F8FAFC}
+th{padding:10px 15px;text-align:left;font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+tbody tr:hover{background:#F8FAFC}
+tbody tr.row-sel{background:#ECFDF5}
+td{padding:11px 15px;vertical-align:middle}
+.co-name{font-weight:700}
+.co-ind{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-top:1px}
+.mono{font-family:'DM Mono',monospace;font-weight:600}
+.sent-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;vertical-align:middle}
+.score-wrap{display:flex;align-items:center;gap:7px}
+.score-bg{width:46px;height:4px;background:#E2E8F0;border-radius:2px;overflow:hidden}
+.score-fill{height:100%;border-radius:2px}
+.cbadge{padding:2px 7px;border-radius:4px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap;border:1px solid}
+.rank-c{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+
+/* CHARTS ROW */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:700px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:18px 18px 12px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.chart-title{font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.chart-h{position:relative;height:240px}
+.chart-empty{height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted)}
+.chart-empty .ei{font-size:34px;opacity:.12;margin-bottom:8px}
+.chart-empty p{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.legend{display:flex;flex-wrap:wrap;gap:5px 11px;margin-top:10px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:9px;font-weight:600;color:var(--muted)}
+.leg-dot{width:8px;height:8px;border-radius:50%}
+
+/* SIDEBAR */
+.sidebar{position:sticky;top:72px}
+.side-welcome{background:var(--navy);border-radius:14px;padding:22px;overflow:hidden;position:relative;margin-bottom:16px}
+.sw-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:white;margin-bottom:8px}
+.sw-body{color:#94A3B8;font-size:11px;line-height:1.7;margin-bottom:16px}
+.sw-feat{display:flex;align-items:center;gap:8px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.glow{position:absolute;right:-20px;bottom:-20px;width:120px;height:120px;border-radius:50%;background:rgba(5,150,105,.1);filter:blur(30px)}
+.alerts-card{background:var(--surface);border-radius:14px;border:1px solid var(--border);padding:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.alerts-title{font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:14px}
+.alert-item{display:flex;gap:10px;margin-bottom:12px}
+.alert-item:last-child{margin-bottom:0}
+.abar{width:3px;border-radius:2px;flex-shrink:0}
+.aname{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.adesc{font-size:11px;color:var(--muted);line-height:1.5}
+
+/* DETAIL PANEL */
+#detail-panel{display:none;animation:slideIn .25s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.dh{background:var(--navy);border-radius:14px 14px 0 0;padding:18px 18px 16px;position:relative}
+.dh-close{position:absolute;top:12px;right:12px;background:rgba(255,255,255,.1);border:none;border-radius:6px;padding:5px;display:flex;color:white}
+.dh-close:hover{background:rgba(255,255,255,.2)}
+.dh-tag{font-size:9px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.dh-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:white;padding-right:28px;margin-bottom:8px}
+.dh-chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dchip{font-size:10px;font-weight:700;background:rgba(255,255,255,.1);color:white;padding:3px 8px;border-radius:6px}
+.dscore{font-size:10px;font-weight:800;color:var(--accent)}
+.dbody{padding:18px;display:flex;flex-direction:column;gap:18px}
+.sec-lbl{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;display:flex;align-items:center;gap:5px}
+.lbo-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.lbox{border-radius:10px;padding:10px 12px;border:1px solid}
+.lbox-lbl{font-size:9px;font-weight:700;text-transform:uppercase;margin-bottom:3px}
+.lbox-val{font-family:'Syne',sans-serif;font-size:17px;font-weight:800}
+.lg{background:#ECFDF5;border-color:#A7F3D0;color:#065F46}
+.lb{background:#EFF6FF;border-color:#BFDBFE;color:#1E40AF}
+.lp{background:#F5F3FF;border-color:#DDD6FE;color:#5B21B6}
+.la{background:#FFFBEB;border-color:#FDE68A;color:#92400E}
+.sl-group{display:flex;flex-direction:column;gap:11px}
+.sl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.sl-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.sl-val{font-family:'DM Mono',monospace;font-size:12px;font-weight:600;color:var(--text)}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:#E2E8F0;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid white;box-shadow:0 0 0 1.5px var(--accent)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid white}
+.divider{height:1px;background:var(--border)}
+.bench-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)}
+.bench-row:last-child{border-bottom:none}
+.blbl{font-size:12px;font-weight:600;color:var(--text)}
+.bsub{font-size:10px;color:var(--muted);margin-top:1px}
+.bval{font-family:'DM Mono',monospace;font-size:13px;font-weight:700;color:var(--accent)}
+#sent-wrap{height:88px}
+.thesis-box{font-size:11px;color:#475569;line-height:1.75;background:#F8FAFC;padding:12px 14px;border-radius:10px;border:1px solid var(--border);white-space:pre-wrap;min-height:54px}
+.thesis-loading{display:flex;flex-direction:column;align-items:center;padding:16px 0;color:var(--muted)}
+.spin{display:inline-block;animation:spin 1s linear infinite;font-size:22px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.thesis-loading p{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-top:7px}
+.btn-add{width:100%;padding:13px;border-radius:10px;border:none;color:white;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;transition:background .2s;letter-spacing:.01em}
+.btn-add.pending{background:var(--navy)}
+.btn-add.added{background:var(--accent)}
+.btn-hint{margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px dashed #CBD5E1;background:transparent;font-size:11px;color:var(--muted);font-weight:600}
+
+/* MODAL */
+.modal-ov{position:fixed;inset:0;background:rgba(15,23,42,.7);z-index:999;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-ov.open{display:flex;animation:fadeUp .2s ease}
+.modal-box{background:var(--surface);border-radius:16px;padding:28px;width:420px;max-width:90vw;border:1px solid var(--border);box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.mtitle{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.micon{background:var(--navy);border-radius:8px;padding:8px;color:var(--accent);display:flex;flex-shrink:0}
+.mdesc{font-size:12px;color:var(--muted);margin-bottom:18px;line-height:1.6}
+.minput{width:100%;padding:10px 14px;border-radius:8px;border:1.5px solid var(--border);font-size:13px;margin-bottom:12px;font-family:'DM Mono',monospace;outline:none;color:var(--text);transition:border-color .15s}
+.minput:focus{border-color:var(--accent)}
+.mbtns{display:flex;gap:8px}
+.mbtn-p{flex:1;padding:11px;border-radius:8px;border:none;font-weight:700;font-size:13px;transition:all .15s;background:#CBD5E1;color:var(--muted);cursor:not-allowed}
+.mbtn-p.on{background:var(--navy);color:white;cursor:pointer}
+.mbtn-s{padding:11px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;font-size:13px;color:var(--muted);font-weight:600}
+</style>
+</head>
+<body>
+
+<!-- MODAL -->
+<div id="modal" class="modal-ov">
+  <div class="modal-box">
+    <div class="mtitle">
+      <div class="micon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg></div>
+      Configure AI Analysis
+    </div>
+    <p class="mdesc">Enter your Anthropic API key to enable AI-powered investment thesis generation. Your key is stored in memory only — never persisted or shared.</p>
+    <input id="mkey" type="password" class="minput" placeholder="sk-ant-..."/>
+    <div class="mbtns">
+      <button id="mbtn-save" class="mbtn-p">Activate AI Engine</button>
+      <button class="mbtn-s" onclick="closeModal()">Skip</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg></div>
+      <span class="logo-text">EquityScan <span>Pro</span></span>
+    </div>
+    <div class="header-right">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="search-input" placeholder="Search universe..."/>
+      </div>
+      <button id="btn-key" class="btn-api inactive">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+        <span id="key-lbl">Add API Key</span>
+      </button>
+      <div class="badge-live"><div class="dot-pulse"></div>LIVE ENGINE</div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- STATS -->
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <!-- PORTFOLIO -->
+  <div id="portfolio-strip">
+    <div class="port-top">
+      <div class="port-meta">
+        <div class="port-meta-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div><div class="port-title">Active Pipeline Analysis</div><div class="port-sub">Aggregate Portfolio Metrics</div></div>
+      </div>
+      <div class="port-stats" id="port-stats"></div>
+    </div>
+    <div class="port-items" id="port-items"></div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+    <div class="left-col">
+      <!-- TABLE -->
+      <div class="panel">
+        <div class="panel-head">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div class="panel-title">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+              Deal Sourcing Pipeline
+            </div>
+            <div class="filter-pills" id="filter-pills"></div>
+          </div>
+          <span class="asset-count" id="asset-count">25 Assets</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Rank</th><th>Company</th><th>EBITDA%</th><th>Debt/EBITDA</th><th>ROIC</th><th>Sentiment</th><th>PE Score</th><th>Classification</th></tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+            Cluster Distribution &amp; Efficiency
+          </div>
+          <div class="chart-h"><canvas id="scatter-c"></canvas></div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Risk/Return Profile
+          </div>
+          <div id="radar-empty" class="chart-empty"><div class="ei">◎</div><p>Select a company</p></div>
+          <div class="chart-h" id="radar-h" style="display:none"><canvas id="radar-c"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div id="side-empty">
+        <div class="side-welcome">
+          <div class="sw-title">Deal Intelligence</div>
+          <div class="sw-body">Select a company from the pipeline to run advanced LBO simulations and generate AI-powered investment theses.</div>
+          <div class="sw-feat" style="color:var(--accent)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Proprietary scoring engine</div>
+          <div class="sw-feat" style="color:#60A5FA"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Market sentiment overlay</div>
+          <div class="glow"></div>
+        </div>
+        <div class="alerts-card">
+          <div class="alerts-title"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Market Alerts</div>
+          <div class="alert-item"><div class="abar" style="background:var(--accent)"></div><div><div class="aname">TechFlow Systems</div><div class="adesc">Strong Q3 earnings beat; FCF conversion at record highs.</div></div></div>
+          <div class="alert-item"><div class="abar" style="background:var(--danger)"></div><div><div class="aname">RetailEdge Inc</div><div class="adesc">Debt covenant breach risk; inventory turnover slowing.</div></div></div>
+          <div class="alert-item"><div class="abar" style="background:var(--blue)"></div><div><div class="aname">HealthCore</div><div class="adesc">Regulatory tailwinds expected in H2 following policy shift.</div></div></div>
+        </div>
+      </div>
+
+      <div id="detail-panel" class="panel">
+        <div class="dh">
+          <button class="dh-close" onclick="clearSel()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+          <div class="dh-tag">Target Profile</div>
+          <div class="dh-name" id="d-name"></div>
+          <div class="dh-chips"><span class="dchip" id="d-ind"></span><span class="dscore" id="d-score"></span></div>
+        </div>
+        <div class="dbody">
+          <div>
+            <div class="sec-lbl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> LBO Returns Simulator</div>
+            <div class="lbo-grid">
+              <div class="lbox lg"><div class="lbox-lbl">Projected IRR</div><div class="lbox-val" id="d-irr">—</div></div>
+              <div class="lbox lb"><div class="lbox-lbl">MOIC</div><div class="lbox-val" id="d-moic">—</div></div>
+              <div class="lbox lp"><div class="lbox-lbl">Debt Paydown</div><div class="lbox-val" id="d-dp">—</div></div>
+              <div class="lbox la"><div class="lbox-lbl">Exit Value</div><div class="lbox-val" id="d-ev">—</div></div>
+            </div>
+            <div class="sl-group">
+              <div><div class="sl-row"><span class="sl-lbl">Entry Multiple</span><span class="sl-val" id="sv-e">10x</span></div><input type="range" id="sl-e" min="5" max="25" step="0.5" value="10"></div>
+              <div><div class="sl-row"><span class="sl-lbl">Target Debt</span><span class="sl-val" id="sv-d">4.5x</span></div><input type="range" id="sl-d" min="1" max="8" step="0.1" value="4.5"></div>
+              <div><div class="sl-row"><span class="sl-lbl">Exit Multiple</span><span class="sl-val" id="sv-x">12x</span></div><input type="range" id="sl-x" min="5" max="25" step="0.5" value="12"></div>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            <div class="sec-lbl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Valuation Benchmarks</div>
+            <div id="bench"></div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            <div class="sec-lbl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Sentiment Trend</div>
+            <div id="sent-wrap"><canvas id="sent-c"></canvas></div>
+          </div>
+          <div class="divider"></div>
+          <div>
+            <div class="sec-lbl"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L13.5 8.5L19 10L13.5 11.5L12 17L10.5 11.5L5 10L10.5 8.5L12 3Z"/></svg> AI Strategic Rationale</div>
+            <div id="thesis"></div>
+            <button id="btn-hint" class="btn-hint" style="display:none">+ Add Anthropic API key for AI thesis</button>
+          </div>
+          <button id="btn-add" class="btn-add pending">
+            Add to Active Pipeline
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+const CC={'Growth Buyout':'#059669','Distressed Target':'#EF4444','Turnaround Case':'#F59E0B','Stable Cash Cow':'#3B82F6','Overvalued':'#8B5CF6'};
+const IM={Software:18.5,Industrial:9.2,Retail:7.5,Healthcare:12.8,Manufacturing:8.5,Consumer:11.0,Energy:14.2,Biotech:22.0,Transport:6.5,Cybersecurity:24.5,Construction:6.8,'Consumer Electronics':13.5,Logistics:8.8,Finance:16.5,Automotive:10.5,Semiconductors:20.0};
+const RAW=[
+  {id:'1',name:'TechFlow Systems',industry:'Software',ebitdaMargin:35,debtToEbitda:1.2,revenueGrowth:25,roic:42,fcfStability:.95,valuationMultiple:22,ebitda:420,sentimentScore:.8,sh:[{d:'Oct',s:.5},{d:'Nov',s:.6},{d:'Dec',s:.7},{d:'Jan',s:.75},{d:'Feb',s:.8}]},
+  {id:'2',name:'Global Logistics Corp',industry:'Industrial',ebitdaMargin:12,debtToEbitda:4.5,revenueGrowth:4,roic:8,fcfStability:.8,valuationMultiple:8,ebitda:660,sentimentScore:.2,sh:[{d:'Oct',s:.3},{d:'Nov',s:.25},{d:'Dec',s:.2},{d:'Jan',s:.15},{d:'Feb',s:.2}]},
+  {id:'3',name:'RetailEdge Inc',industry:'Retail',ebitdaMargin:4,debtToEbitda:8.2,revenueGrowth:-2,roic:3,fcfStability:.4,valuationMultiple:5,ebitda:320,sentimentScore:-.6,sh:[{d:'Oct',s:-.2},{d:'Nov',s:-.3},{d:'Dec',s:-.4},{d:'Jan',s:-.5},{d:'Feb',s:-.6}]},
+  {id:'4',name:'HealthCore Solutions',industry:'Healthcare',ebitdaMargin:22,debtToEbitda:2.8,revenueGrowth:12,roic:18,fcfStability:.9,valuationMultiple:14,ebitda:528,sentimentScore:.4,sh:[{d:'Oct',s:.2},{d:'Nov',s:.3},{d:'Dec',s:.35},{d:'Jan',s:.4},{d:'Feb',s:.4}]},
+  {id:'5',name:'Precision Mfg',industry:'Manufacturing',ebitdaMargin:18,debtToEbitda:3.2,revenueGrowth:6,roic:22,fcfStability:.85,valuationMultiple:10,ebitda:270,sentimentScore:.1,sh:[{d:'Oct',s:0},{d:'Nov',s:.05},{d:'Dec',s:.1},{d:'Jan',s:.12},{d:'Feb',s:.1}]},
+  {id:'6',name:'CloudScale AI',industry:'Software',ebitdaMargin:-5,debtToEbitda:.5,revenueGrowth:85,roic:-10,fcfStability:.2,valuationMultiple:45,ebitda:-25,sentimentScore:.9,sh:[{d:'Oct',s:.6},{d:'Nov',s:.75},{d:'Dec',s:.85},{d:'Jan',s:.9},{d:'Feb',s:.95}]},
+  {id:'7',name:'Legacy Brands Co',industry:'Consumer',ebitdaMargin:28,debtToEbitda:5.5,revenueGrowth:1,roic:12,fcfStability:.98,valuationMultiple:12,ebitda:896,sentimentScore:0,sh:[{d:'Oct',s:.1},{d:'Nov',s:.05},{d:'Dec',s:0},{d:'Jan',s:-.05},{d:'Feb',s:0}]},
+  {id:'8',name:'EcoPower Utilities',industry:'Energy',ebitdaMargin:45,debtToEbitda:6.8,revenueGrowth:3,roic:6,fcfStability:.9,valuationMultiple:15,ebitda:2700,sentimentScore:-.2,sh:[{d:'Oct',s:0},{d:'Nov',s:-.1},{d:'Dec',s:-.15},{d:'Jan',s:-.2},{d:'Feb',s:-.25}]},
+  {id:'9',name:'BioGenix Labs',industry:'Biotech',ebitdaMargin:15,debtToEbitda:2.1,revenueGrowth:40,roic:25,fcfStability:.6,valuationMultiple:28,ebitda:120,sentimentScore:.7,sh:[{d:'Oct',s:.4},{d:'Nov',s:.5},{d:'Dec',s:.6},{d:'Jan',s:.65},{d:'Feb',s:.7}]},
+  {id:'10',name:'Urban Mobility',industry:'Transport',ebitdaMargin:2,debtToEbitda:7.5,revenueGrowth:15,roic:5,fcfStability:.3,valuationMultiple:6,ebitda:24,sentimentScore:-.4,sh:[{d:'Oct',s:-.1},{d:'Nov',s:-.2},{d:'Dec',s:-.3},{d:'Jan',s:-.4},{d:'Feb',s:-.45}]},
+  {id:'11',name:'DataSecure Ltd',industry:'Cybersecurity',ebitdaMargin:20,debtToEbitda:1.5,revenueGrowth:30,roic:35,fcfStability:.88,valuationMultiple:20,ebitda:190,sentimentScore:.6,sh:[{d:'Oct',s:.3},{d:'Nov',s:.4},{d:'Dec',s:.5},{d:'Jan',s:.55},{d:'Feb',s:.6}]},
+  {id:'12',name:'HeavyIron Works',industry:'Construction',ebitdaMargin:8,debtToEbitda:5.2,revenueGrowth:2,roic:7,fcfStability:.75,valuationMultiple:7,ebitda:336,sentimentScore:-.1,sh:[{d:'Oct',s:.1},{d:'Nov',s:.05},{d:'Dec',s:0},{d:'Jan',s:-.05},{d:'Feb',s:-.1}]},
+  {id:'13',name:'SmartHome Devices',industry:'Consumer Electronics',ebitdaMargin:14,debtToEbitda:3.8,revenueGrowth:18,roic:15,fcfStability:.7,valuationMultiple:16,ebitda:294,sentimentScore:.3,sh:[{d:'Oct',s:.1},{d:'Nov',s:.15},{d:'Dec',s:.2},{d:'Jan',s:.25},{d:'Feb',s:.3}]},
+  {id:'14',name:'Oceanic Shipping',industry:'Logistics',ebitdaMargin:30,debtToEbitda:4.2,revenueGrowth:5,roic:10,fcfStability:.85,valuationMultiple:9,ebitda:1140,sentimentScore:.1,sh:[{d:'Oct',s:-.1},{d:'Nov',s:0},{d:'Dec',s:.05},{d:'Jan',s:.1},{d:'Feb',s:.12}]},
+  {id:'15',name:'FinTech Prime',industry:'Finance',ebitdaMargin:40,debtToEbitda:.8,revenueGrowth:22,roic:45,fcfStability:.92,valuationMultiple:24,ebitda:720,sentimentScore:.85,sh:[{d:'Oct',s:.6},{d:'Nov',s:.7},{d:'Dec',s:.75},{d:'Jan',s:.8},{d:'Feb',s:.85}]},
+  {id:'16',name:'Solaris Energy',industry:'Energy',ebitdaMargin:25,debtToEbitda:3.5,revenueGrowth:15,roic:14,fcfStability:.8,valuationMultiple:12,ebitda:750,sentimentScore:.5,sh:[{d:'Oct',s:.2},{d:'Nov',s:.3},{d:'Dec',s:.4},{d:'Jan',s:.45},{d:'Feb',s:.5}]},
+  {id:'17',name:'AutoDrive Systems',industry:'Automotive',ebitdaMargin:10,debtToEbitda:2.5,revenueGrowth:50,roic:20,fcfStability:.5,valuationMultiple:30,ebitda:100,sentimentScore:.75,sh:[{d:'Oct',s:.4},{d:'Nov',s:.55},{d:'Dec',s:.65},{d:'Jan',s:.7},{d:'Feb',s:.75}]},
+  {id:'18',name:'GreenHarvest Foods',industry:'Consumer',ebitdaMargin:15,debtToEbitda:4.0,revenueGrowth:8,roic:10,fcfStability:.9,valuationMultiple:11,ebitda:375,sentimentScore:.3,sh:[{d:'Oct',s:.1},{d:'Nov',s:.15},{d:'Dec',s:.2},{d:'Jan',s:.25},{d:'Feb',s:.3}]},
+  {id:'19',name:'NanoChip Tech',industry:'Semiconductors',ebitdaMargin:45,debtToEbitda:1.0,revenueGrowth:35,roic:55,fcfStability:.96,valuationMultiple:28,ebitda:1800,sentimentScore:.9,sh:[{d:'Oct',s:.7},{d:'Nov',s:.8},{d:'Dec',s:.85},{d:'Jan',s:.9},{d:'Feb',s:.92}]},
+  {id:'20',name:'SkyHigh Airlines',industry:'Transport',ebitdaMargin:5,debtToEbitda:9.0,revenueGrowth:2,roic:4,fcfStability:.3,valuationMultiple:4,ebitda:500,sentimentScore:-.5,sh:[{d:'Oct',s:-.2},{d:'Nov',s:-.3},{d:'Dec',s:-.4},{d:'Jan',s:-.5},{d:'Feb',s:-.55}]},
+  {id:'21',name:'MedTech Innovate',industry:'Healthcare',ebitdaMargin:18,debtToEbitda:1.8,revenueGrowth:22,roic:30,fcfStability:.8,valuationMultiple:18,ebitda:216,sentimentScore:.5,sh:[{d:'Oct',s:.2},{d:'Nov',s:.3},{d:'Dec',s:.4},{d:'Jan',s:.45},{d:'Feb',s:.5}]},
+  {id:'22',name:'CloudNet Security',industry:'Cybersecurity',ebitdaMargin:25,debtToEbitda:.5,revenueGrowth:45,roic:40,fcfStability:.9,valuationMultiple:32,ebitda:150,sentimentScore:.8,sh:[{d:'Oct',s:.5},{d:'Nov',s:.6},{d:'Dec',s:.7},{d:'Jan',s:.75},{d:'Feb',s:.8}]},
+  {id:'23',name:'SteelWorks Global',industry:'Manufacturing',ebitdaMargin:10,debtToEbitda:5.8,revenueGrowth:3,roic:9,fcfStability:.7,valuationMultiple:6,ebitda:450,sentimentScore:-.2,sh:[{d:'Oct',s:0},{d:'Nov',s:-.1},{d:'Dec',s:-.15},{d:'Jan',s:-.2},{d:'Feb',s:-.22}]},
+  {id:'24',name:'FreshGrocer',industry:'Retail',ebitdaMargin:3,debtToEbitda:4.2,revenueGrowth:5,roic:12,fcfStability:.95,valuationMultiple:10,ebitda:360,sentimentScore:.1,sh:[{d:'Oct',s:0},{d:'Nov',s:.05},{d:'Dec',s:.08},{d:'Jan',s:.1},{d:'Feb',s:.12}]},
+  {id:'25',name:'Quantum Computing',industry:'Software',ebitdaMargin:5,debtToEbitda:.5,revenueGrowth:150,roic:10,fcfStability:.2,valuationMultiple:80,ebitda:25,sentimentScore:.95,sh:[{d:'Oct',s:.7},{d:'Nov',s:.8},{d:'Dec',s:.9},{d:'Jan',s:.92},{d:'Feb',s:.95}]},
+];
+
+// ─── CALC ─────────────────────────────────────────────────────────────────────
+function calcLBO(c,eM,tD,xM,yr=5){
+  const ee=c.ebitda*eM,ed=c.ebitda*tD,eq=ee-ed;
+  const xe=c.ebitda*Math.pow(1+(c.revenueGrowth/100),yr)*xM;
+  const g=c.revenueGrowth/100,te=g===0?c.ebitda*yr:c.ebitda*((Math.pow(1+g,yr)-1)/g);
+  const dp=te*.3,xd=Math.max(0,ed-dp),xeq=xe-xd,moic=xeq/eq;
+  const irr=(Math.pow(Math.max(moic,.01),1/yr)-1)*100;
+  return{irr:Math.round(irr*10)/10,moic:Math.round(moic*10)/10,dp:Math.round(dp),ev:Math.round(xeq)};
+}
+function score(c){
+  const ne=Math.min(Math.max(c.ebitdaMargin/40,0),1),nd=Math.max(1-(c.debtToEbitda/10),0),
+    ng=Math.min(Math.max(c.revenueGrowth/30,0),1),nr=Math.min(Math.max(c.roic/50,0),1),
+    nf=c.fcfStability,nv=Math.max(1-(c.valuationMultiple/25),0),ns=(c.sentimentScore+1)/2;
+  return Math.round((ne*.1+ng*.1+nr*.15+nf*.25+nv*.25+nd*.1+ns*.05)*100);
+}
+function cluster(c){
+  if(c.ebitdaMargin<5&&c.debtToEbitda>6)return'Distressed Target';
+  if(c.revenueGrowth>15&&c.roic>20)return'Growth Buyout';
+  if(c.ebitdaMargin<10&&c.roic>15&&c.revenueGrowth>0)return'Turnaround Case';
+  if(c.valuationMultiple>18)return'Overvalued';
+  return'Stable Cash Cow';
+}
+const COS=RAW.map(c=>({...c,peScore:score(c),cluster:cluster(c),lbo:calcLBO(c,c.valuationMultiple,c.debtToEbitda,c.valuationMultiple+2)}))
+  .sort((a,b)=>b.peScore-a.peScore).map((c,i)=>({...c,rank:i+1}));
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let ST={search:'',cf:'All',sel:null,port:[],apiKey:null};
+let CH={scatter:null,radar:null,sent:null};
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  buildStats(); buildPills(); buildScatter(); renderTable();
+  document.getElementById('search-input').addEventListener('input',e=>{ST.search=e.target.value;renderTable();});
+  document.getElementById('sl-e').addEventListener('input',onSlider);
+  document.getElementById('sl-d').addEventListener('input',onSlider);
+  document.getElementById('sl-x').addEventListener('input',onSlider);
+  document.getElementById('btn-add').addEventListener('click',addToPort);
+  document.getElementById('btn-key').addEventListener('click',openModal);
+  document.getElementById('btn-hint').addEventListener('click',openModal);
+  document.getElementById('mbtn-save').addEventListener('click',saveKey);
+  document.getElementById('mkey').addEventListener('input',function(){document.getElementById('mbtn-save').className='mbtn-p'+(this.value?' on':'');});
+  document.getElementById('mkey').addEventListener('keydown',e=>{if(e.key==='Enter')saveKey();});
+  document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+});
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function buildStats(){
+  const top=COS[0],avg=Math.round(COS.reduce((a,c)=>a+c.peScore,0)/COS.length),
+    gr=COS.filter(c=>c.cluster==='Growth Buyout').length,
+    di=COS.filter(c=>c.cluster==='Distressed Target').length;
+  const s=[
+    {t:'Conviction Target',v:top.name,sub:'Score: '+top.peScore+'/100',ic:'var(--accent)',icon:'target',tr:'High Priority',up:true},
+    {t:'Universe Avg Score',v:avg,sub:'Normalized PE Metrics',ic:'var(--blue)',icon:'activity',tr:'+1.2% MoM',up:true},
+    {t:'Growth Buyouts',v:gr,sub:'High ROIC Candidates',ic:'var(--accent)',icon:'trend',tr:'Identified',up:true},
+    {t:'Distressed Watch',v:di,sub:'Turnaround Potential',ic:'var(--danger)',icon:'alert',tr:'Active',up:false},
+  ];
+  document.getElementById('stats-grid').innerHTML=s.map(x=>`
+    <div class="stat-card"><div class="stat-top">
+      <div class="stat-icon" style="color:${x.ic}">${ico(x.icon)}</div>
+      <span class="${x.up?'trend-up':'trend-dn'}">${x.up?ico('up'):ico('dn')} ${x.tr}</span>
+    </div><div>
+      <div class="stat-label">${x.t}</div>
+      <div class="stat-value">${x.v}</div>
+      <div class="stat-sub">${x.sub}</div>
+    </div></div>`).join('');
+}
+
+// ─── PILLS ────────────────────────────────────────────────────────────────────
+const CLUS=['All','Growth Buyout','Distressed Target','Turnaround Case','Stable Cash Cow'];
+function buildPills(){
+  document.getElementById('filter-pills').innerHTML=CLUS.map(c=>`<button class="fpill${ST.cf===c?' active':''}" onclick="setCF('${c}')">${c}</button>`).join('');
+}
+function setCF(c){ST.cf=c;buildPills();renderTable();}
+
+// ─── TABLE ────────────────────────────────────────────────────────────────────
+function getFiltered(){return COS.filter(c=>{const s=ST.search.toLowerCase();return(c.name.toLowerCase().includes(s)||c.industry.toLowerCase().includes(s))&&(ST.cf==='All'||c.cluster===ST.cf);})}
+function renderTable(){
+  const f=getFiltered();
+  document.getElementById('asset-count').textContent=f.length+' Assets';
+  document.getElementById('tbody').innerHTML=f.map(c=>{
+    const sc=c.sentimentScore>.5?'#059669':c.sentimentScore>0?'#3B82F6':'#EF4444';
+    const sl=c.sentimentScore>.5?'Bullish':c.sentimentScore>0?'Neutral':'Bearish';
+    const bc=c.peScore>75?'var(--accent)':c.peScore>50?'var(--blue)':'var(--warn)';
+    const sel=ST.sel?.id===c.id?' row-sel':'';
+    return`<tr class="${sel}" onclick="selCo('${c.id}')">
+      <td class="rank-c">#${String(c.rank).padStart(2,'0')}</td>
+      <td><div class="co-name">${c.name}</div><div class="co-ind">${c.industry}</div></td>
+      <td class="mono">${c.ebitdaMargin}%</td><td class="mono">${c.debtToEbitda}x</td><td class="mono">${c.roic}%</td>
+      <td><span class="sent-dot" style="background:${sc}"></span><span style="font-size:11px;font-weight:700;color:var(--muted)">${sl}</span></td>
+      <td><div class="score-wrap"><span class="mono" style="font-size:13px;font-weight:800">${c.peScore}</span><div class="score-bg"><div class="score-fill" style="width:${c.peScore}%;background:${bc}"></div></div></div></td>
+      <td><span class="cbadge" style="background:${CC[c.cluster]}18;color:${CC[c.cluster]};border-color:${CC[c.cluster]}35">${c.cluster}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── SELECT ───────────────────────────────────────────────────────────────────
+function selCo(id){
+  ST.sel=COS.find(c=>c.id===id);
+  renderTable(); renderDetail(); buildRadar();
+}
+function clearSel(){
+  ST.sel=null; renderTable();
+  document.getElementById('detail-panel').style.display='none';
+  document.getElementById('side-empty').style.display='block';
+  document.getElementById('radar-empty').style.display='flex';
+  document.getElementById('radar-h').style.display='none';
+  if(CH.radar){CH.radar.destroy();CH.radar=null;}
+}
+
+// ─── DETAIL ───────────────────────────────────────────────────────────────────
+function renderDetail(){
+  const c=ST.sel; if(!c) return;
+  document.getElementById('side-empty').style.display='none';
+  document.getElementById('detail-panel').style.display='block';
+  document.getElementById('d-name').textContent=c.name;
+  document.getElementById('d-ind').textContent=c.industry;
+  document.getElementById('d-score').textContent='Score: '+c.peScore;
+  document.getElementById('sl-e').value=c.valuationMultiple;
+  document.getElementById('sl-d').value=Math.max(c.debtToEbitda,4.5);
+  document.getElementById('sl-x').value=c.valuationMultiple+1;
+  onSlider();
+  document.getElementById('bench').innerHTML=[
+    {l:'Entry EV/EBITDA',v:c.valuationMultiple+'x',s:'Current Market'},
+    {l:'Industry Median',v:(IM[c.industry]||12.5)+'x',s:c.industry+' Sector'},
+    {l:'Target Exit',v:parseFloat(document.getElementById('sl-x').value)+'x',s:'5-Year Horizon'},
+  ].map(r=>`<div class="bench-row"><div><div class="blbl">${r.l}</div><div class="bsub">${r.s}</div></div><div class="bval">${r.v}</div></div>`).join('');
+  buildSent(c);
+  const inP=ST.port.find(p=>p.id===c.id);
+  document.getElementById('btn-add').textContent=inP?'✓ Added to Pipeline':'Add to Active Pipeline';
+  document.getElementById('btn-add').className='btn-add '+(inP?'added':'pending');
+  genThesis(c);
+}
+
+// ─── SLIDERS ──────────────────────────────────────────────────────────────────
+function onSlider(){
+  const c=ST.sel; if(!c) return;
+  const eM=parseFloat(document.getElementById('sl-e').value),
+    tD=parseFloat(document.getElementById('sl-d').value),
+    xM=parseFloat(document.getElementById('sl-x').value);
+  document.getElementById('sv-e').textContent=eM+'x';
+  document.getElementById('sv-d').textContent=tD+'x';
+  document.getElementById('sv-x').textContent=xM+'x';
+  const l=calcLBO(c,eM,tD,xM);
+  document.getElementById('d-irr').textContent=l.irr+'%';
+  document.getElementById('d-moic').textContent=l.moic+'x';
+  document.getElementById('d-dp').textContent='$'+l.dp+'M';
+  document.getElementById('d-ev').textContent='$'+l.ev+'M';
+}
+
+// ─── SCATTER ──────────────────────────────────────────────────────────────────
+function buildScatter(){
+  const ctx=document.getElementById('scatter-c').getContext('2d');
+  const cm={};
+  COS.forEach(c=>{if(!cm[c.cluster])cm[c.cluster]=[];cm[c.cluster].push({x:c.ebitdaMargin,y:c.roic,r:Math.max(5,c.peScore/12),label:c.name});});
+  CH.scatter=new Chart(ctx,{type:'bubble',data:{datasets:Object.entries(cm).map(([cl,pts])=>({label:cl,data:pts,backgroundColor:CC[cl]+'BB',borderColor:CC[cl],borderWidth:1,pointRadius:pts.map(p=>p.r)}))},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:'EBITDA Margin %',font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'},ticks:{color:'#94A3B8',font:{size:10}}},y:{title:{display:true,text:'ROIC %',font:{size:10},color:'#94A3B8'},grid:{color:'#F1F5F9'},ticks:{color:'#94A3B8',font:{size:10}}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.label}: ${c.raw.x}% EBITDA, ${c.raw.y}% ROIC`}}}}});
+  document.getElementById('legend').innerHTML=Object.entries(CC).map(([k,v])=>`<div class="leg-item"><div class="leg-dot" style="background:${v}"></div>${k}</div>`).join('');
+}
+
+// ─── RADAR ────────────────────────────────────────────────────────────────────
+function buildRadar(){
+  const c=ST.sel; if(!c) return;
+  document.getElementById('radar-empty').style.display='none';
+  document.getElementById('radar-h').style.display='block';
+  if(CH.radar){CH.radar.destroy();}
+  CH.radar=new Chart(document.getElementById('radar-c').getContext('2d'),{type:'radar',
+    data:{labels:['Margin','Growth','ROIC','FCF','Value'],datasets:[{label:c.name,
+      data:[c.ebitdaMargin,c.revenueGrowth,c.roic,c.fcfStability*50,Math.max(0,(25-c.valuationMultiple)*2)],
+      backgroundColor:'rgba(5,150,105,.25)',borderColor:'#059669',borderWidth:2,pointBackgroundColor:'#059669',pointRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:true,scales:{r:{suggestedMin:0,suggestedMax:50,ticks:{display:false},grid:{color:'#E2E8F0'},pointLabels:{font:{size:11,weight:'700'},color:'#64748B'}}},plugins:{legend:{display:false}}}});
+}
+
+// ─── SENTIMENT ────────────────────────────────────────────────────────────────
+function buildSent(c){
+  if(CH.sent){CH.sent.destroy();}
+  CH.sent=new Chart(document.getElementById('sent-c').getContext('2d'),{type:'line',
+    data:{labels:c.sh.map(h=>h.d),datasets:[{data:c.sh.map(h=>h.s),borderColor:'#059669',backgroundColor:'rgba(5,150,105,.1)',borderWidth:2,fill:true,tension:.4,pointBackgroundColor:'#059669',pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{min:-1,max:1,grid:{color:'#F1F5F9'},ticks:{color:'#94A3B8',font:{size:9}}},x:{grid:{display:false},ticks:{color:'#94A3B8',font:{size:9}}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>'Score: '+c.raw}}}}});
+}
+
+// ─── AI THESIS ────────────────────────────────────────────────────────────────
+async function genThesis(c){
+  const el=document.getElementById('thesis'),hint=document.getElementById('btn-hint');
+  if(!ST.apiKey){
+    el.innerHTML=`<div class="thesis-box" style="color:var(--muted);font-style:italic">No API key configured. Add your Anthropic key to generate investment theses.</div>`;
+    hint.style.display='block'; return;
+  }
+  hint.style.display='none';
+  el.innerHTML=`<div class="thesis-loading"><div class="spin">⟳</div><p>Synthesizing analysis…</p></div>`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':ST.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,messages:[{role:'user',content:`Act as a PE Investment Associate. Generate a concise investment thesis (3 bullet points starting with "•") for ${c.name}, a ${c.industry} company.\nEBITDA Margin: ${c.ebitdaMargin}%, D/E: ${c.debtToEbitda}x, Growth: ${c.revenueGrowth}%, ROIC: ${c.roic}%, Classification: ${c.cluster}.\nFocus on value creation levers and key risks. Be crisp and data-driven.`}]})});
+    const d=await r.json();
+    if(d.error)throw new Error(d.error.message);
+    el.innerHTML=`<div class="thesis-box">${(d.content?.map(b=>b.text||'').join(''))||'No analysis returned.'}</div>`;
+  }catch(e){el.innerHTML=`<div class="thesis-box" style="color:var(--danger)">Error: ${e.message}</div>`;}
+}
+
+// ─── PORTFOLIO ────────────────────────────────────────────────────────────────
+function addToPort(){
+  const c=ST.sel; if(!c||ST.port.find(p=>p.id===c.id)) return;
+  ST.port.push(c); renderPort();
+  document.getElementById('btn-add').textContent='✓ Added to Pipeline';
+  document.getElementById('btn-add').className='btn-add added';
+}
+function rmPort(id){
+  ST.port=ST.port.filter(p=>p.id!==id); renderPort();
+  if(ST.sel?.id===id){document.getElementById('btn-add').textContent='Add to Active Pipeline';document.getElementById('btn-add').className='btn-add pending';}
+}
+function renderPort(){
+  const el=document.getElementById('portfolio-strip'); if(!ST.port.length){el.style.display='none';return;}
+  el.style.display='block';
+  const avg=Math.round(ST.port.reduce((a,p)=>a+p.peScore,0)/ST.port.length);
+  const ev=Math.round(ST.port.reduce((a,p)=>a+(p.ebitda*p.valuationMultiple),0));
+  const irr=Math.round(ST.port.reduce((a,p)=>a+p.lbo.irr,0)/ST.port.length);
+  document.getElementById('port-stats').innerHTML=[{l:'Avg PE Score',v:avg,c:'var(--accent)'},{l:'Total EV',v:'$'+ev+'M',c:'#60A5FA'},{l:'Avg IRR',v:irr+'%',c:'#C084FC'}]
+    .map(m=>`<div class="port-stat"><div class="port-stat-lbl">${m.l}</div><div class="port-stat-val" style="color:${m.c}">${m.v}</div></div>`).join('');
+  document.getElementById('port-items').innerHTML=ST.port.map(p=>`
+    <div class="port-item"><span class="port-item-name">${p.name}</span><span class="port-item-score">${p.peScore}</span>
+    <button class="port-rm" onclick="rmPort('${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`).join('');
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(){document.getElementById('modal').classList.add('open');}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+function saveKey(){
+  const k=document.getElementById('mkey').value.trim(); if(!k) return;
+  ST.apiKey=k; closeModal();
+  document.getElementById('btn-key').className='btn-api active';
+  document.getElementById('key-lbl').textContent='AI Active';
+  document.getElementById('btn-hint').style.display='none';
+  if(ST.sel) genThesis(ST.sel);
+}
+
+// ─── ICONS ────────────────────────────────────────────────────────────────────
+function ico(n){const m={
+  target:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+  activity:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+  trend:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+  alert:`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+  up:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>`,
+  dn:`<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="7" x2="17" y2="17"/><polyline points="17 7 17 17 7 17"/></svg>`
+};return m[n]||'';}
+</script>
+</body>
+</html>
