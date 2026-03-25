@@ -1,6 +1,4 @@
-Here is the structured **README.md** code. You can copy this directly into a file named `README.md` in your GitHub repository.
 
-````markdown
 # EquityScan 📈
 
 **EquityScan** is a professional-grade web application designed for real-time stock market screening and quantitative equity analysis. By bridging the gap between modern web technologies and quantitative finance principles, it empowers users to filter through market data using custom technical indicators and fundamental metrics to identify high-potential investment opportunities.
@@ -23,8 +21,6 @@ Access the live application here: [https://arham7s.github.io/EquityScan/](https:
 ## 🛠️ Tech Stack
 
 * **Frontend:** HTML5, CSS3 (Flexbox/Grid), JavaScript (ES6+)
-* **Data Handling:** [e.g., Alpha Vantage, Yahoo Finance, or Finnhub API]
-* **Charting:** [e.g., Chart.js, TradingView Lightweight Charts, or D3.js]
 * **Deployment:** GitHub Pages
 
 ---
@@ -94,7 +90,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 **Arham Shah** [LinkedIn](https://www.linkedin.com/in/arham-shah) | [GitHub](https://github.com/arham7s)  
 Project Link: [https://github.com/arham7s/EquityScan](https://www.google.com/search?q=https://github.com/arham7s/EquityScan)
 
-```
 
-Would you like me to help you write a more detailed "Technical Implementation" section specifically for the API handling or the charting logic?
-```
